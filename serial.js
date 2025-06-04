@@ -1,35 +1,33 @@
 let port;
 let reader;
 
-async function connectArduino() {
+async function connectSerial() {
   try {
     port = await navigator.serial.requestPort();
     await port.open({ baudRate: 9600 });
-    reader = port.readable.getReader();
+
+    const decoder = new TextDecoderStream();
+    reader = port.readable.pipeThrough(decoder).getReader();
+
     readLoop();
-  } catch (err) {
-    alert("Error al conectar con Arduino: " + err);
+  } catch (error) {
+    console.error("Error conectando al puerto serial:", error);
   }
+}
+
+function movePlayer1(direction) {
+  if (direction === "UP") player1.y -= 10;
+  if (direction === "DOWN") player1.y += 10;
+  if (direction === "LEFT") player1.x -= 10;
+  if (direction === "RIGHT") player1.x += 10;
 }
 
 async function readLoop() {
-  const decoder = new TextDecoderStream();
-  port.readable.pipeTo(decoder.writable);
-  const inputStream = decoder.readable;
-  const reader = inputStream.getReader();
-
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
-    if (value) handleArduinoInput(value.trim());
-  }
-}
-
-function handleArduinoInput(command) {
-  switch (command) {
-    case "UP": player1.y -= 10; break;
-    case "DOWN": player1.y += 10; break;
-    case "LEFT": player1.x -= 10; break;
-    case "RIGHT": player1.x += 10; break;
+    if (value) {
+      movePlayer1(value.trim());
+    }
   }
 }
